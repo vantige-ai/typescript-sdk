@@ -25,7 +25,7 @@ export class VantigeAuth {
     }
 
     // Validate key format more strictly
-    const keyPattern = /^vk_(live|test)_[a-zA-Z0-9]{32,}$/;
+    const keyPattern = /^vk_(live|test)_[a-zA-Z0-9_-]{32}$/;
     if (!keyPattern.test(apiKey)) {
       throw createVantigeError(
         VantigeErrorCode.INVALID_API_KEY,
@@ -87,7 +87,7 @@ export class VantigeAuth {
       errors.push('API key must start with "vk_live_" or "vk_test_"');
     }
 
-    const keyPattern = /^vk_(live|test)_[a-zA-Z0-9]{32,}$/;
+    const keyPattern = /^vk_(live|test)_[a-zA-Z0-9_-]{32,}$/;
     if (!keyPattern.test(apiKey)) {
       errors.push("API key format is invalid");
     }
