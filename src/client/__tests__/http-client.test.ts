@@ -59,7 +59,7 @@ describe('VantigeHttpClient', () => {
         headers: {
           'Authorization': 'Bearer test-token',
           'Content-Type': 'application/json',
-          'User-Agent': '@vantige-ai/typescript-sdk/0.1.2',
+          'User-Agent': `@vantige-ai/typescript-sdk/${process.env.npm_package_version || '0.1.0'}`,
         },
       });
     });
