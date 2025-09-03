@@ -1,5 +1,11 @@
 # @vantige-ai/typescript-sdk
 
+## 0.2.2
+
+### Patch Changes
+
+- 5d70483: Switch to shields.io for npm badge
+
 ## 0.2.1
 
 ### Patch Changes
