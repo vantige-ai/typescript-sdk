@@ -1,5 +1,11 @@
 # @vantige-ai/typescript-sdk
 
+## 0.2.1
+
+### Patch Changes
+
+- 2416fd8: Fix for version badge in README.md
+
 ## 0.2.0
 
 ### Minor Changes
