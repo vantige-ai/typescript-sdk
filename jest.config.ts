@@ -20,7 +20,8 @@ module.exports = {
   coverageReporters: [
     'text',
     'lcov',
-    'html'
+    'html',
+    'json-summary'
   ],
   setupFilesAfterEnv: ['<rootDir>/src/test/setup.ts']
 };

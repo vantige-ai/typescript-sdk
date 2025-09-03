@@ -4,6 +4,8 @@ import {
   VantigeConfig,
   ListKnowledgeBasesParams,
   ListKnowledgeBasesResponse,
+  ListAvailableCorpusesParams,
+  ListAvailableCorpusesResponse,
   QueryParams,
   QueryResponse,
   ApiKeyInfo,
@@ -67,6 +69,43 @@ export class VantigeClient {
       throw createVantigeError(
         VantigeErrorCode.SERVICE_UNAVAILABLE,
         "Failed to list knowledge bases",
+      );
+    }
+
+    return response;
+  }
+
+  /**
+   * List all available corpuses based on external scope
+   */
+  async listAvailableCorpuses(
+    params?: ListAvailableCorpusesParams,
+  ): Promise<ListAvailableCorpusesResponse> {
+    const queryParams = new URLSearchParams();
+
+    if (params?.external_scope) {
+      queryParams.append("external_scope", params.external_scope);
+    }
+    if (params?.page) {
+      queryParams.append("page", params.page.toString());
+    }
+    if (params?.limit) {
+      queryParams.append("limit", params.limit.toString());
+    }
+    if (params?.includeArchived !== undefined) {
+      queryParams.append("includeArchived", params.includeArchived.toString());
+    }
+
+    const queryString = queryParams.toString();
+    const url = `/api/v1/knowledge-base/available${queryString ? `?${queryString}` : ""}`;
+
+    const response =
+      await this.httpClient.get<ListAvailableCorpusesResponse>(url);
+
+    if (!response.success) {
+      throw createVantigeError(
+        VantigeErrorCode.SERVICE_UNAVAILABLE,
+        "Failed to list available corpuses",
       );
     }
 

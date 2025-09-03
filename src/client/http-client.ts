@@ -132,7 +132,7 @@ export class VantigeHttpClient {
           VantigeErrorCode.KNOWLEDGE_BASE_NOT_FOUND,
         ];
 
-        if (nonRetryableErrors.includes(lastError.code as VantigeErrorCode)) {
+        if (nonRetryableErrors.includes(lastError.code)) {
           throw lastError;
         }
 

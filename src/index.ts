@@ -21,6 +21,12 @@ export type {
   ListKnowledgeBasesResponse,
   PaginationInfo,
   
+  // Available Corpuses Types
+  KnowledgeBaseDataset,
+  AvailableKnowledgeBase,
+  ListAvailableCorpusesParams,
+  ListAvailableCorpusesResponse,
+  
   // Query Types
   QueryParams,
   QueryResponse,
@@ -50,6 +56,14 @@ export {
   validateQueryLength,
   sanitizeQuery,
 } from './types/validation';
+
+// ===== AI SDK TOOLS UTILITIES =====
+export {
+  createKnowledgeBaseTools,
+  createSimpleKnowledgeBaseTools,
+  createKnowledgeBaseToolsWithOptions,
+  type CreateToolsOptions,
+} from './utils/ai-sdk-tools';
 
 // ===== CONVENIENCE FACTORY FUNCTIONS =====
 

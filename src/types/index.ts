@@ -47,6 +47,46 @@ export interface ListKnowledgeBasesResponse {
   pagination: PaginationInfo;
 }
 
+// ===== AVAILABLE CORPUSES TYPES =====
+export interface KnowledgeBaseDataset {
+  datasetId: string;
+  datasetName: string;
+  importStatus: string | null;
+  importedAt: string | null;
+  fileCount: number;
+}
+
+export interface AvailableKnowledgeBase {
+  id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  documentCount: number;
+  isArchived: boolean;
+  externalScopes: string[];
+  organizationId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  datasets: KnowledgeBaseDataset[];
+}
+
+export interface ListAvailableCorpusesParams {
+  external_scope?: string;
+  page?: number;
+  limit?: number;
+  includeArchived?: boolean;
+}
+
+export interface ListAvailableCorpusesResponse {
+  success: boolean;
+  knowledgeBases: AvailableKnowledgeBase[];
+  pagination: PaginationInfo;
+  filters: {
+    externalScope: string | null;
+    includeArchived: boolean;
+  };
+}
+
 // ===== QUERY TYPES =====
 export interface QueryParams {
   query: string;
