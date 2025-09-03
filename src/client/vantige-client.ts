@@ -99,7 +99,8 @@ export class VantigeClient {
     const queryString = queryParams.toString();
     const url = `/api/v1/knowledge-base/available${queryString ? `?${queryString}` : ""}`;
 
-    const response = await this.httpClient.get<ListAvailableCorpusesResponse>(url);
+    const response =
+      await this.httpClient.get<ListAvailableCorpusesResponse>(url);
 
     if (!response.success) {
       throw createVantigeError(
