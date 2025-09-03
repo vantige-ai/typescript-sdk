@@ -89,7 +89,7 @@ test-results/
 *.temp
 
 # Package manager lock files (keep package-lock.json but ignore others)
-yarn.lock
+package-lock.json
 pnpm-lock.yaml
 
 # API keys and secrets (never commit)
