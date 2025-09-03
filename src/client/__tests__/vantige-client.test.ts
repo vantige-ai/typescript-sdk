@@ -154,4 +154,160 @@ describe('VantigeClient', () => {
     // Custom base URL test removed - config is internal
     // The effect of custom baseUrl should be tested through actual API calls
   });
+
+  describe('Knowledge Base Management', () => {
+    let client: VantigeClient;
+
+    beforeEach(() => {
+      client = new VantigeClient({ apiKey: validTestApiKey });
+    });
+
+    describe('listKnowledgeBases', () => {
+      it('should call the correct API endpoint without parameters', async () => {
+        // Mock the HTTP client
+        const mockResponse = {
+          success: true,
+          knowledgeBases: [
+            {
+              id: 'test123',
+              name: 'Test Knowledge Base',
+              description: 'A test knowledge base',
+              status: 'active',
+              documentCount: 10,
+              isArchived: false,
+              createdAt: '2024-01-01T00:00:00.000Z',
+              updatedAt: '2024-01-01T00:00:00.000Z',
+              datasets: []
+            }
+          ],
+          pagination: {
+            total: 1,
+            page: 1,
+            limit: 20,
+            totalPages: 1
+          }
+        };
+
+        // Mock the httpClient.get method
+        jest.spyOn(client['httpClient'], 'get').mockResolvedValue(mockResponse);
+
+        const result = await client.listKnowledgeBases();
+
+        expect(client['httpClient'].get).toHaveBeenCalledWith('/api/v1/knowledge-base');
+        expect(result).toEqual(mockResponse);
+      });
+
+      it('should call the correct API endpoint with parameters', async () => {
+        const mockResponse = {
+          success: true,
+          knowledgeBases: [],
+          pagination: {
+            total: 0,
+            page: 2,
+            limit: 10,
+            totalPages: 0
+          }
+        };
+
+        jest.spyOn(client['httpClient'], 'get').mockResolvedValue(mockResponse);
+
+        const params = {
+          page: 2,
+          limit: 10,
+          includeArchived: true
+        };
+
+        const result = await client.listKnowledgeBases(params);
+
+        expect(client['httpClient'].get).toHaveBeenCalledWith(
+          '/api/v1/knowledge-base?page=2&limit=10&includeArchived=true'
+        );
+        expect(result).toEqual(mockResponse);
+      });
+
+      it('should throw error when API returns unsuccessful response', async () => {
+        const mockResponse = {
+          success: false,
+          error: 'Service unavailable'
+        };
+
+        jest.spyOn(client['httpClient'], 'get').mockResolvedValue(mockResponse);
+
+        await expect(client.listKnowledgeBases()).rejects.toThrow(VantigeSDKError);
+      });
+    });
+
+    describe('listAvailableCorpuses', () => {
+      it('should call the correct API endpoint without parameters', async () => {
+        const mockResponse = {
+          success: true,
+          corpuses: [
+            {
+              id: 'corpus123',
+              name: 'Test Corpus',
+              description: 'A test corpus',
+              status: 'active',
+              documentCount: 5,
+              isArchived: false,
+              createdAt: '2024-01-01T00:00:00.000Z',
+              updatedAt: '2024-01-01T00:00:00.000Z',
+              datasets: []
+            }
+          ],
+          pagination: {
+            total: 1,
+            page: 1,
+            limit: 20,
+            totalPages: 1
+          }
+        };
+
+        jest.spyOn(client['httpClient'], 'get').mockResolvedValue(mockResponse);
+
+        const result = await client.listAvailableCorpuses();
+
+        expect(client['httpClient'].get).toHaveBeenCalledWith('/api/v1/knowledge-base/available');
+        expect(result).toEqual(mockResponse);
+      });
+
+      it('should call the correct API endpoint with parameters', async () => {
+        const mockResponse = {
+          success: true,
+          corpuses: [],
+          pagination: {
+            total: 0,
+            page: 1,
+            limit: 50,
+            totalPages: 0
+          }
+        };
+
+        jest.spyOn(client['httpClient'], 'get').mockResolvedValue(mockResponse);
+
+        const params = {
+          page: 1,
+          limit: 50,
+          includeArchived: false
+        };
+
+        const result = await client.listAvailableCorpuses(params);
+
+        expect(client['httpClient'].get).toHaveBeenCalledWith(
+          '/api/v1/knowledge-base/available?page=1&limit=50&includeArchived=false'
+        );
+        expect(result).toEqual(mockResponse);
+      });
+
+      it('should throw error when API returns unsuccessful response', async () => {
+        const mockResponse = {
+          success: false,
+          error: 'Service unavailable'
+        };
+
+        jest.spyOn(client['httpClient'], 'get').mockResolvedValue(mockResponse);
+
+        await expect(client.listAvailableCorpuses()).rejects.toThrow(VantigeSDKError);
+      });
+    });
+  });
 });

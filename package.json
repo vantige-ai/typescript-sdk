@@ -27,7 +27,10 @@
     "prepublishOnly": "yarn build:types && yarn test",
     "docs:start": "cd docs && yarn start",
     "docs:build": "cd docs && yarn build",
-    "docs:serve": "cd docs && yarn serve"
+    "docs:serve": "cd docs && yarn serve",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "changeset publish"
   },
   "keywords": [
     "vantige",
@@ -49,6 +52,7 @@
   },
   "homepage": "https://github.com/vantige-ai/typescript-sdk#readme",
   "devDependencies": {
+    "@changesets/cli": "^2.29.6",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.11.24",
     "@typescript-eslint/eslint-plugin": "^7.1.1",
