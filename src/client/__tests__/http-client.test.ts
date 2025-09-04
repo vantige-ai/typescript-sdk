@@ -13,6 +13,12 @@ describe('VantigeHttpClient', () => {
   let mockAxiosInstance: any;
 
   beforeEach(() => {
+    // Mock setTimeout to make retry delays instant
+    jest.spyOn(global, 'setTimeout').mockImplementation((fn) => {
+      fn();
+      return {} as any;
+    });
+
     mockAuth = {
       getAuthHeaders: jest.fn().mockReturnValue({
         'Authorization': 'Bearer test-token',
@@ -39,8 +45,8 @@ describe('VantigeHttpClient', () => {
 
     httpClient = new VantigeHttpClient({
       baseUrl: 'https://api.vantige.ai',
-      timeout: 30000,
-      retries: 3,
+      timeout: 1000, // Much shorter timeout for tests
+      retries: 2, // Fewer retries for faster tests
       auth: mockAuth,
       debug: false,
     });
@@ -48,6 +54,7 @@ describe('VantigeHttpClient', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    jest.restoreAllMocks();
   });
 
   describe('Constructor', () => {
@@ -55,7 +62,7 @@ describe('VantigeHttpClient', () => {
       expect(httpClient).toBeInstanceOf(VantigeHttpClient);
       expect(mockedAxios.create).toHaveBeenCalledWith({
         baseURL: 'https://api.vantige.ai',
-        timeout: 30000,
+        timeout: 1000,
         headers: {
           'Authorization': 'Bearer test-token',
           'Content-Type': 'application/json',
@@ -70,6 +77,13 @@ describe('VantigeHttpClient', () => {
   });
 
   describe('Error Handling', () => {
+    it('should pass through existing VantigeSDKError without wrapping', async () => {
+      const existing = new VantigeSDKError('Existing', VantigeErrorCode.NETWORK_ERROR);
+      mockAxiosInstance.get = jest.fn().mockRejectedValue(existing);
+
+      await expect(httpClient.get('/test')).rejects.toBe(existing);
+    });
+
     it('should handle network timeout errors', async () => {
       const timeoutError = new Error('timeout of 30000ms exceeded') as AxiosError;
       timeoutError.code = 'ECONNABORTED';
@@ -78,7 +92,7 @@ describe('VantigeHttpClient', () => {
       mockAxiosInstance.get = jest.fn().mockRejectedValue(timeoutError);
 
       await expect(httpClient.get('/test')).rejects.toThrow(VantigeSDKError);
-    }, 10000);
+    });
 
     it('should handle network errors without response', async () => {
       const networkError = new Error('Network Error') as AxiosError;
@@ -88,7 +102,7 @@ describe('VantigeHttpClient', () => {
       mockAxiosInstance.get = jest.fn().mockRejectedValue(networkError);
 
       await expect(httpClient.get('/test')).rejects.toThrow(VantigeSDKError);
-    }, 10000);
+    });
 
     it('should handle 401 Unauthorized errors', async () => {
       const unauthorizedError = {
@@ -102,7 +116,7 @@ describe('VantigeHttpClient', () => {
       mockAxiosInstance.get = jest.fn().mockRejectedValue(unauthorizedError);
 
       await expect(httpClient.get('/test')).rejects.toThrow(VantigeSDKError);
-    }, 10000);
+    });
 
     it('should handle 403 Forbidden errors', async () => {
       const forbiddenError = {
@@ -116,7 +130,7 @@ describe('VantigeHttpClient', () => {
       mockAxiosInstance.get = jest.fn().mockRejectedValue(forbiddenError);
 
       await expect(httpClient.get('/test')).rejects.toThrow(VantigeSDKError);
-    }, 10000);
+    });
 
     it('should handle 404 Not Found errors', async () => {
       const notFoundError = {
@@ -130,7 +144,7 @@ describe('VantigeHttpClient', () => {
       mockAxiosInstance.get = jest.fn().mockRejectedValue(notFoundError);
 
       await expect(httpClient.get('/test')).rejects.toThrow(VantigeSDKError);
-    }, 10000);
+    });
 
     it('should handle 422 Validation errors', async () => {
       const validationError = {
@@ -144,7 +158,7 @@ describe('VantigeHttpClient', () => {
       mockAxiosInstance.get = jest.fn().mockRejectedValue(validationError);
 
       await expect(httpClient.get('/test')).rejects.toThrow(VantigeSDKError);
-    }, 10000);
+    });
 
     it('should handle 429 Rate Limit errors', async () => {
       const rateLimitError = {
@@ -158,7 +172,7 @@ describe('VantigeHttpClient', () => {
       mockAxiosInstance.get = jest.fn().mockRejectedValue(rateLimitError);
 
       await expect(httpClient.get('/test')).rejects.toThrow(VantigeSDKError);
-    }, 10000);
+    });
 
     it('should handle 500 Internal Server errors', async () => {
       const serverError = {
@@ -172,7 +186,7 @@ describe('VantigeHttpClient', () => {
       mockAxiosInstance.get = jest.fn().mockRejectedValue(serverError);
 
       await expect(httpClient.get('/test')).rejects.toThrow(VantigeSDKError);
-    }, 10000);
+    });
 
     it('should handle 503 Service Unavailable errors', async () => {
       const serviceUnavailableError = {
@@ -186,7 +200,7 @@ describe('VantigeHttpClient', () => {
       mockAxiosInstance.get = jest.fn().mockRejectedValue(serviceUnavailableError);
 
       await expect(httpClient.get('/test')).rejects.toThrow(VantigeSDKError);
-    }, 10000);
+    });
 
     it('should handle unknown HTTP errors', async () => {
       const unknownError = {
@@ -200,7 +214,7 @@ describe('VantigeHttpClient', () => {
       mockAxiosInstance.get = jest.fn().mockRejectedValue(unknownError);
 
       await expect(httpClient.get('/test')).rejects.toThrow(VantigeSDKError);
-    }, 10000);
+    });
 
     it('should handle non-axios errors', async () => {
       const genericError = new Error('Generic error');
@@ -208,10 +222,25 @@ describe('VantigeHttpClient', () => {
       mockAxiosInstance.get = jest.fn().mockRejectedValue(genericError);
 
       await expect(httpClient.get('/test')).rejects.toThrow(VantigeSDKError);
-    }, 10000);
+    });
   });
 
   describe('Retry Logic', () => {
+    it('should throw after exhausting retries', async () => {
+      const networkError = new Error('Network Error') as AxiosError;
+      networkError.isAxiosError = true;
+      networkError.response = undefined;
+
+      mockAxiosInstance.get = jest.fn()
+        .mockRejectedValueOnce(networkError)
+        .mockRejectedValueOnce(networkError)
+        .mockRejectedValueOnce(networkError)
+        .mockRejectedValueOnce(networkError);
+
+      await expect(httpClient.get('/test')).rejects.toBeInstanceOf(VantigeSDKError);
+      expect(mockAxiosInstance.get).toHaveBeenCalled();
+    });
+
     it('should retry on network errors', async () => {
       const networkError = new Error('Network Error') as AxiosError;
       networkError.isAxiosError = true;
@@ -227,7 +256,7 @@ describe('VantigeHttpClient', () => {
       const result = await httpClient.get('/test');
       expect(result).toEqual(successResponse);
       expect(mockAxiosInstance.get).toHaveBeenCalledTimes(3);
-    }, 10000);
+    });
 
     it('should not retry on authentication errors', async () => {
       const authError = {
@@ -247,7 +276,7 @@ describe('VantigeHttpClient', () => {
 
       await expect(httpClient.get('/test')).rejects.toThrow(VantigeSDKError);
       expect(mockAxiosInstance.get).toHaveBeenCalledTimes(1);
-    }, 10000);
+    });
 
     it('should not retry on validation errors', async () => {
       const validationError = {
@@ -267,7 +296,7 @@ describe('VantigeHttpClient', () => {
 
       await expect(httpClient.get('/test')).rejects.toThrow(VantigeSDKError);
       expect(mockAxiosInstance.get).toHaveBeenCalledTimes(1);
-    }, 10000);
+    });
 
     it('should retry on rate limit errors with delay', async () => {
       const rateLimitError = {
@@ -288,21 +317,32 @@ describe('VantigeHttpClient', () => {
         .mockRejectedValueOnce(rateLimitError)
         .mockResolvedValueOnce({ data: successResponse });
 
-      // Mock setTimeout to avoid actual delays in tests
-      jest.spyOn(global, 'setTimeout').mockImplementation((fn) => {
-        fn();
-        return {} as any;
-      });
-
       const result = await httpClient.get('/test');
       expect(result).toEqual(successResponse);
       expect(mockAxiosInstance.get).toHaveBeenCalledTimes(2);
-
-      jest.restoreAllMocks();
-    }, 10000);
+    });
   });
 
   describe('HTTP Methods', () => {
+    it('should use interceptor success handler to return response unmodified', () => {
+      const handlers: any = {};
+      mockAxiosInstance.interceptors.response.use = jest.fn((success: any, fail: any) => {
+        handlers.success = success;
+        handlers.fail = fail;
+      });
+
+      // Recreate client to register interceptor with captured handlers
+      httpClient = new VantigeHttpClient({
+        baseUrl: 'https://api.vantige.ai',
+        timeout: 1000,
+        retries: 2,
+        auth: mockAuth,
+      });
+
+      const resp = { data: { ok: true } } as any;
+      const result = handlers.success(resp);
+      expect(result).toBe(resp);
+    });
     it('should make GET requests', async () => {
       const mockResponse = { success: true };
       mockAxiosInstance.get = jest.fn().mockResolvedValue({ data: mockResponse });

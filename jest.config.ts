@@ -23,5 +23,7 @@ module.exports = {
     'html',
     'json-summary'
   ],
-  setupFilesAfterEnv: ['<rootDir>/src/test/setup.ts']
+  setupFilesAfterEnv: ['<rootDir>/src/test/setup.ts'],
+  testTimeout: 5000, // 5 second timeout for all tests
+  maxWorkers: '50%' // Use half the available CPU cores for parallel test execution
 };
