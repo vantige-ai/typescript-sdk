@@ -6,6 +6,13 @@ import { z } from 'zod';
 
 /**
  * Example showing how to create AI SDK tools from available knowledge bases
+ * 
+ * This example demonstrates how to create tools compatible with different versions
+ * of Vercel's AI SDK:
+ * - AI SDK v4: Uses 'parameters' property for input schema
+ * - AI SDK v5+: Uses 'inputSchema' property (MCP-aligned)
+ * 
+ * You can specify the version as the third parameter to any tool creation function.
  */
 async function exampleAISDKToolsUsage() {
   // Initialize the Vantige client
@@ -33,7 +40,8 @@ async function exampleAISDKToolsUsage() {
     console.log('\n=== Creating Simple AI SDK Tools ===');
     const simpleTools = createSimpleKnowledgeBaseTools(
       availableResponse.knowledgeBases,
-      client
+      client,
+      'v5' // Default to v5, but you can specify 'v4' for legacy support
     );
 
     console.log('Simple tools created:', Object.keys(simpleTools));
@@ -60,7 +68,8 @@ async function exampleAISDKToolsUsage() {
     console.log('\n=== Creating Full-Featured AI SDK Tools ===');
     const fullTools = createKnowledgeBaseTools(
       availableResponse.knowledgeBases,
-      client
+      client,
+      'v5' // Default to v5, but you can specify 'v4' for legacy support
     );
 
     console.log('Full tools created:', Object.keys(fullTools));
@@ -72,6 +81,7 @@ async function exampleAISDKToolsUsage() {
       client,
       {
         simplified: true, // Use simple interface
+        version: 'v5', // Specify AI SDK version ('v4' or 'v5')
         keyGenerator: (kb) => `search-${kb.name.toLowerCase().replace(/\s+/g, '-')}`,
         descriptionGenerator: (kb) => `Search the ${kb.name} knowledge base for relevant information. ${kb.description || ''}`,
       }
@@ -79,7 +89,33 @@ async function exampleAISDKToolsUsage() {
 
     console.log('Custom tools created:', Object.keys(customTools));
 
-    // ===== EXAMPLE 4: Testing a Tool =====
+    // ===== EXAMPLE 4: AI SDK Version Comparison =====
+    console.log('\n=== AI SDK Version Comparison ===');
+    
+    // Create tools for v4 (legacy)
+    const v4Tools = createSimpleKnowledgeBaseTools(
+      availableResponse.knowledgeBases.slice(0, 1), // Just one for demo
+      client,
+      'v4'
+    );
+    
+    // Create tools for v5 (current)
+    const v5Tools = createSimpleKnowledgeBaseTools(
+      availableResponse.knowledgeBases.slice(0, 1), // Just one for demo
+      client,
+      'v5'
+    );
+    
+    const firstToolKey = Object.keys(v4Tools)[0];
+    if (firstToolKey) {
+      console.log(`\nTool "${firstToolKey}" structure comparison:`);
+      console.log('v4 tool has "parameters":', 'parameters' in v4Tools[firstToolKey]);
+      console.log('v4 tool has "inputSchema":', 'inputSchema' in v4Tools[firstToolKey]);
+      console.log('v5 tool has "parameters":', 'parameters' in v5Tools[firstToolKey]);
+      console.log('v5 tool has "inputSchema":', 'inputSchema' in v5Tools[firstToolKey]);
+    }
+
+    // ===== EXAMPLE 5: Testing a Tool =====
     if (availableResponse.knowledgeBases.length > 0) {
       console.log('\n=== Testing a Knowledge Base Tool ===');
       const firstKB = availableResponse.knowledgeBases[0];
@@ -111,7 +147,7 @@ async function exampleAISDKToolsUsage() {
       }
     }
 
-    // ===== EXAMPLE 5: Integration with Vercel AI SDK =====
+    // ===== EXAMPLE 6: Integration with Vercel AI SDK =====
     console.log('\n=== Vercel AI SDK Integration Example ===');
     
     // This is how you would use it in a real Vercel AI SDK application
@@ -142,7 +178,7 @@ async function exampleAISDKToolsUsage() {
 
     console.log('AI SDK configuration ready with tools:', Object.keys(aiSDKIntegration.tools));
 
-    // ===== EXAMPLE 6: Dynamic Tool Loading =====
+    // ===== EXAMPLE 7: Dynamic Tool Loading =====
     console.log('\n=== Dynamic Tool Loading Example ===');
     
     // Function to dynamically load tools based on external scope
