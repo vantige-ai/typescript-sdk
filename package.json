@@ -1,6 +1,6 @@
 {
   "name": "@vantige-ai/typescript-sdk",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Official TypeScript SDK for Vantige AI's knowledge base querying API",
   "private": false,
   "author": "Eddie Hudson <eddie@vantige.ai>",
