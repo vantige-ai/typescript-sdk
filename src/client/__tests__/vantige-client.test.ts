@@ -309,5 +309,50 @@ describe('VantigeClient', () => {
         await expect(client.listAvailableCorpuses()).rejects.toThrow(VantigeSDKError);
       });
     });
+
+    describe('query', () => {
+      it('should validate inputs and call correct endpoint', async () => {
+        const mockResponse = {
+          success: true,
+          corpusId: 'kb1',
+          query: 'hello',
+          retrieval_results: []
+        };
+
+        jest.spyOn(client['httpClient'], 'post').mockResolvedValue(mockResponse as any);
+
+        const result = await client.query('kb1', { query: 'hello', topK: 5 });
+        expect(client['httpClient'].post).toHaveBeenCalledWith('/api/v1/knowledge-base/kb1/query', { query: 'hello', topK: 5 });
+        expect(result).toEqual(mockResponse);
+      });
+
+      it('should throw on invalid inputs', async () => {
+        await expect(client.query('', { query: 'x' } as any)).rejects.toThrow(VantigeSDKError);
+        await expect(client.query('kb1', { query: '' } as any)).rejects.toThrow(VantigeSDKError);
+        await expect(client.query('kb1', { query: 'a'.repeat(1001) } as any)).rejects.toThrow(VantigeSDKError);
+        await expect(client.query('kb1', { query: 'ok', topK: 0 } as any)).rejects.toThrow(VantigeSDKError);
+        await expect(client.query('kb1', { query: 'ok', topK: 101 } as any)).rejects.toThrow(VantigeSDKError);
+      });
+
+      it('should throw when backend responds unsuccessfully', async () => {
+        jest.spyOn(client['httpClient'], 'post').mockResolvedValue({ success: false } as any);
+        await expect(client.query('kb1', { query: 'ok' })).rejects.toThrow(VantigeSDKError);
+      });
+    });
+
+    describe('testConnection', () => {
+      it('should return success info when listing works', async () => {
+        jest.spyOn(client, 'listKnowledgeBases').mockResolvedValue({ success: true } as any);
+        const result = await client.testConnection();
+        expect(result.success).toBe(true);
+        expect(result.environment).toBe('test');
+        expect(typeof result.latency).toBe('number');
+      });
+
+      it('should wrap errors into network error when listing fails', async () => {
+        jest.spyOn(client, 'listKnowledgeBases').mockRejectedValue(new Error('fail'));
+        await expect(client.testConnection()).rejects.toThrow(VantigeSDKError);
+      });
+    });
   });
 });

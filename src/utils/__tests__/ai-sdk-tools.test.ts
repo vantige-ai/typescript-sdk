@@ -101,6 +101,24 @@ describe('AI SDK Tools', () => {
       expect(tools).toHaveProperty('user-guide-faq');
     });
 
+    it('should create tools with v4 schema format', () => {
+      const tools = createKnowledgeBaseTools(mockKnowledgeBases, mockClient, 'v4');
+      const tool = tools['product-documentation'];
+
+      expect(tool).toHaveProperty('parameters');
+      expect(tool).not.toHaveProperty('inputSchema');
+      expect(tool.parameters).toBeDefined();
+    });
+
+    it('should create tools with v5 schema format by default', () => {
+      const tools = createKnowledgeBaseTools(mockKnowledgeBases, mockClient);
+      const tool = tools['product-documentation'];
+
+      expect(tool).toHaveProperty('inputSchema');
+      expect(tool).not.toHaveProperty('parameters');
+      expect(tool.inputSchema).toBeDefined();
+    });
+
     it('should create tools with correct structure', () => {
       const tools = createKnowledgeBaseTools(mockKnowledgeBases, mockClient);
       const tool = tools['product-documentation'];
@@ -188,6 +206,24 @@ describe('AI SDK Tools', () => {
 
       expect(Object.keys(tools)).toHaveLength(3);
       expect(tools).toHaveProperty('product-documentation');
+    });
+
+    it('should create tools with v4 schema format', () => {
+      const tools = createSimpleKnowledgeBaseTools(mockKnowledgeBases, mockClient, 'v4');
+      const tool = tools['product-documentation'];
+
+      expect(tool).toHaveProperty('parameters');
+      expect(tool).not.toHaveProperty('inputSchema');
+      expect(tool.parameters).toBeDefined();
+    });
+
+    it('should create tools with v5 schema format by default', () => {
+      const tools = createSimpleKnowledgeBaseTools(mockKnowledgeBases, mockClient);
+      const tool = tools['product-documentation'];
+
+      expect(tool).toHaveProperty('inputSchema');
+      expect(tool).not.toHaveProperty('parameters');
+      expect(tool.inputSchema).toBeDefined();
     });
 
     it('should execute with only query parameter', async () => {
@@ -285,6 +321,59 @@ describe('AI SDK Tools', () => {
       
       const tool = tools['kb-kb1'];
       expect(tool.description).toBe('Query Product Documentation knowledge base');
+    });
+
+    it('should create tools with v4 schema format', () => {
+      const tools = createKnowledgeBaseToolsWithOptions(
+        mockKnowledgeBases,
+        mockClient,
+        { version: 'v4' }
+      );
+      const tool = tools['product-documentation'];
+
+      expect(tool).toHaveProperty('parameters');
+      expect(tool).not.toHaveProperty('inputSchema');
+      expect(tool.parameters).toBeDefined();
+    });
+
+    it('should create simplified tools with v4 schema format', () => {
+      const tools = createKnowledgeBaseToolsWithOptions(
+        mockKnowledgeBases,
+        mockClient,
+        { simplified: true, version: 'v4' }
+      );
+      const tool = tools['product-documentation'];
+
+      expect(tool).toHaveProperty('parameters');
+      expect(tool).not.toHaveProperty('inputSchema');
+      expect(tool.parameters).toBeDefined();
+    });
+
+    it('should execute simplified tools with v4 schema format', async () => {
+      const mockQueryResponse: QueryResponse = {
+        success: true,
+        corpusId: 'kb1',
+        query: 'test query',
+        retrieval_results: [],
+      };
+
+      mockClient.query.mockResolvedValue(mockQueryResponse);
+
+      const tools = createKnowledgeBaseToolsWithOptions(
+        mockKnowledgeBases,
+        mockClient,
+        { simplified: true, version: 'v4' }
+      );
+      const tool = tools['product-documentation'];
+
+      const result = await tool.execute!({
+        query: 'test query',
+      });
+
+      expect(mockClient.query).toHaveBeenCalledWith('kb1', {
+        query: 'test query',
+      });
+      expect(result).toEqual(mockQueryResponse);
     });
   });
 

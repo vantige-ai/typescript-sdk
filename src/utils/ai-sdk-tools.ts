@@ -21,7 +21,8 @@ export type MinimalToolExecuteFunction<INPUT, OUTPUT> = (
 export type AISDKToolLike<INPUT = any, OUTPUT = any> = {
   description?: string;
   providerOptions?: Record<string, unknown>;
-  inputSchema: unknown; // zod schema works here
+  inputSchema?: unknown; // zod schema works here (AI SDK v5+)
+  parameters?: unknown; // Legacy support for AI SDK v4
   onInputStart?: (options: MinimalToolCallOptions) => void | Promise<void>;
   onInputDelta?: (
     options: { inputTextDelta: string } & MinimalToolCallOptions,
@@ -59,11 +60,13 @@ function generateToolKey(knowledgeBase: AvailableKnowledgeBase): string {
  *
  * @param knowledgeBases - Array of available knowledge bases
  * @param client - VantigeClient instance for querying
- * @returns Object of tools compatible with Vercel AI SDK
+ * @param version - AI SDK version to target ('v4' or 'v5', defaults to 'v5')
+ * @returns Object of tools compatible with the specified Vercel AI SDK version
  */
 export function createKnowledgeBaseTools(
   knowledgeBases: AvailableKnowledgeBase[],
   client: VantigeClient,
+  version: 'v4' | 'v5' = 'v5',
 ): Record<string, AISDKToolLike<any, QueryResponse>> {
   const tools: Record<string, AISDKToolLike<any, QueryResponse>> = {};
 
@@ -71,40 +74,41 @@ export function createKnowledgeBaseTools(
     const toolKey = generateToolKey(kb);
 
     // Create the tool using zod schema and execute function
-    tools[toolKey] = {
+    const schema = z.object({
+      query: z
+        .string()
+        .describe("The search query to find relevant information"),
+      topK: z
+        .number()
+        .min(1)
+        .max(100)
+        .optional()
+        .describe("Maximum number of results to return (1-100)"),
+      includeMetadata: z
+        .boolean()
+        .optional()
+        .describe("Whether to include metadata in results"),
+      useGeneration: z
+        .boolean()
+        .optional()
+        .describe("Whether to use AI generation for response"),
+      fieldMapping: z
+        .object({
+          sourceUri: z
+            .string()
+            .optional()
+            .describe("Field name for source URI"),
+          sourceDisplayName: z
+            .string()
+            .optional()
+            .describe("Field name for source display name"),
+        })
+        .optional()
+        .describe("Custom field mapping for results"),
+    });
+
+    const tool: AISDKToolLike<any, QueryResponse> = {
       description: kb.description || `Query the ${kb.name} knowledge base`,
-      inputSchema: z.object({
-        query: z
-          .string()
-          .describe("The search query to find relevant information"),
-        topK: z
-          .number()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe("Maximum number of results to return (1-100)"),
-        includeMetadata: z
-          .boolean()
-          .optional()
-          .describe("Whether to include metadata in results"),
-        useGeneration: z
-          .boolean()
-          .optional()
-          .describe("Whether to use AI generation for response"),
-        fieldMapping: z
-          .object({
-            sourceUri: z
-              .string()
-              .optional()
-              .describe("Field name for source URI"),
-            sourceDisplayName: z
-              .string()
-              .optional()
-              .describe("Field name for source display name"),
-          })
-          .optional()
-          .describe("Custom field mapping for results"),
-      }),
       execute: async (
         params: {
           query: string;
@@ -135,6 +139,15 @@ export function createKnowledgeBaseTools(
         return await client.query(kb.id, queryParams);
       },
     };
+
+    // Set the appropriate schema property based on version
+    if (version === 'v4') {
+      tool.parameters = schema;
+    } else {
+      tool.inputSchema = schema;
+    }
+
+    tools[toolKey] = tool;
   }
 
   return tools;
@@ -146,11 +159,13 @@ export function createKnowledgeBaseTools(
  *
  * @param knowledgeBases - Array of available knowledge bases
  * @param client - VantigeClient instance for querying
- * @returns Object of tools compatible with Vercel AI SDK
+ * @param version - AI SDK version to target ('v4' or 'v5', defaults to 'v5')
+ * @returns Object of tools compatible with the specified Vercel AI SDK version
  */
 export function createSimpleKnowledgeBaseTools(
   knowledgeBases: AvailableKnowledgeBase[],
   client: VantigeClient,
+  version: 'v4' | 'v5' = 'v5',
 ): Record<string, AISDKToolLike<{ query: string }, QueryResponse>> {
   const tools: Record<
     string,
@@ -161,13 +176,14 @@ export function createSimpleKnowledgeBaseTools(
     const toolKey = generateToolKey(kb);
 
     // Create the tool with simplified schema (only query required)
-    tools[toolKey] = {
+    const schema = z.object({
+      query: z
+        .string()
+        .describe("The search query to find relevant information"),
+    });
+
+    const tool: AISDKToolLike<{ query: string }, QueryResponse> = {
       description: kb.description || `Query the ${kb.name} knowledge base`,
-      inputSchema: z.object({
-        query: z
-          .string()
-          .describe("The search query to find relevant information"),
-      }),
       execute: async (
         params: { query: string },
         _options?: MinimalToolCallOptions,
@@ -175,6 +191,15 @@ export function createSimpleKnowledgeBaseTools(
         return await client.query(kb.id, { query: params.query });
       },
     };
+
+    // Set the appropriate schema property based on version
+    if (version === 'v4') {
+      tool.parameters = schema;
+    } else {
+      tool.inputSchema = schema;
+    }
+
+    tools[toolKey] = tool;
   }
 
   return tools;
@@ -189,6 +214,12 @@ export interface CreateToolsOptions {
    * @default false
    */
   simplified?: boolean;
+
+  /**
+   * AI SDK version to target ('v4' or 'v5')
+   * @default 'v5'
+   */
+  version?: 'v4' | 'v5';
 
   /**
    * Custom function to generate tool keys from knowledge base names
@@ -218,6 +249,7 @@ export function createKnowledgeBaseToolsWithOptions(
 ): Record<string, AISDKToolLike<any, QueryResponse>> {
   const {
     simplified = false,
+    version = 'v5',
     keyGenerator = generateToolKey,
     descriptionGenerator = (kb) =>
       kb.description || `Query the ${kb.name} knowledge base`,
@@ -230,13 +262,14 @@ export function createKnowledgeBaseToolsWithOptions(
     const description = descriptionGenerator(kb);
 
     if (simplified) {
-      tools[toolKey] = {
+      const schema = z.object({
+        query: z
+          .string()
+          .describe("The search query to find relevant information"),
+      });
+
+      const tool: AISDKToolLike<{ query: string }, QueryResponse> = {
         description,
-        inputSchema: z.object({
-          query: z
-            .string()
-            .describe("The search query to find relevant information"),
-        }),
         execute: async (
           params: { query: string },
           _options?: MinimalToolCallOptions,
@@ -244,41 +277,51 @@ export function createKnowledgeBaseToolsWithOptions(
           return await client.query(kb.id, { query: params.query });
         },
       };
+
+      // Set the appropriate schema property based on version
+      if (version === 'v4') {
+        tool.parameters = schema;
+      } else {
+        tool.inputSchema = schema;
+      }
+
+      tools[toolKey] = tool;
     } else {
-      tools[toolKey] = {
+      const schema = z.object({
+        query: z
+          .string()
+          .describe("The search query to find relevant information"),
+        topK: z
+          .number()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe("Maximum number of results to return (1-100)"),
+        includeMetadata: z
+          .boolean()
+          .optional()
+          .describe("Whether to include metadata in results"),
+        useGeneration: z
+          .boolean()
+          .optional()
+          .describe("Whether to use AI generation for response"),
+        fieldMapping: z
+          .object({
+            sourceUri: z
+              .string()
+              .optional()
+              .describe("Field name for source URI"),
+            sourceDisplayName: z
+              .string()
+              .optional()
+              .describe("Field name for source display name"),
+          })
+          .optional()
+          .describe("Custom field mapping for results"),
+      });
+
+      const tool: AISDKToolLike<any, QueryResponse> = {
         description,
-        inputSchema: z.object({
-          query: z
-            .string()
-            .describe("The search query to find relevant information"),
-          topK: z
-            .number()
-            .min(1)
-            .max(100)
-            .optional()
-            .describe("Maximum number of results to return (1-100)"),
-          includeMetadata: z
-            .boolean()
-            .optional()
-            .describe("Whether to include metadata in results"),
-          useGeneration: z
-            .boolean()
-            .optional()
-            .describe("Whether to use AI generation for response"),
-          fieldMapping: z
-            .object({
-              sourceUri: z
-                .string()
-                .optional()
-                .describe("Field name for source URI"),
-              sourceDisplayName: z
-                .string()
-                .optional()
-                .describe("Field name for source display name"),
-            })
-            .optional()
-            .describe("Custom field mapping for results"),
-        }),
         execute: async (
           params: {
             query: string;
@@ -309,6 +352,15 @@ export function createKnowledgeBaseToolsWithOptions(
           return await client.query(kb.id, queryParams);
         },
       };
+
+      // Set the appropriate schema property based on version
+      if (version === 'v4') {
+        tool.parameters = schema;
+      } else {
+        tool.inputSchema = schema;
+      }
+
+      tools[toolKey] = tool;
     }
   }
 
